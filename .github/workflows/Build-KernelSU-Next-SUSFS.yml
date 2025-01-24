@@ -1,15 +1,15 @@
-name: Build KernelSU Next SUSFS
+name: Build KernelSU Next SUSFS non mainfast
 on:
   workflow_dispatch:
     inputs:
       CPU:
         description: "分支"
         required: true
-        default: 'sm7675'
+        default: 'sm8650'
       FEIL:
         description: "配置文件"
-        required: true
-        default: 'oneplus_ace_3v_v'
+        required: false
+        default: ''
       CPUD:
         description: "处理器代号"
         required: true
@@ -48,21 +48,12 @@ jobs:
          sudo apt update && sudo apt upgrade -y
          sudo apt install -y python3 git curl
 
-      - name: Install repo tool
-        run: |
-         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
-         chmod a+x ~/repo
-         sudo mv ~/repo /usr/local/bin/repo
-
-      - name: Initialize repo and sync
+      - name: Clone kernel repository
         run: |
          mkdir kernel_workspace && cd kernel_workspace
-         repo init -u https://github.com/OnePlusOSS/kernel_manifest.git -b refs/heads/oneplus/${{ github.event.inputs.CPU }} -m ${{ github.event.inputs.FEIL }}.xml --depth=1
-         repo sync
-         rm kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
-         rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
-         sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
-         sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
+         git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/msm-kernel
+         git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/common
+         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
 
       - name: Set up KernelSU Next
         run: |
