@@ -1,4 +1,4 @@
-name: Build KernelSU Next SUSFS non mainfast
+name: Build KernelSU Next SUSFS
 on:
   workflow_dispatch:
     inputs:
@@ -48,12 +48,17 @@ jobs:
          sudo apt update && sudo apt upgrade -y
          sudo apt install -y python3 git curl
 
-      - name: Clone kernel repository
+      - name: Clone kernel repositories
         run: |
          mkdir kernel_workspace && cd kernel_workspace
          git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/msm-kernel
          git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/common
-         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/modules_and_devicetree
+
+      - name: Copy necessary files
+        run: |
+         cd kernel_workspace/kernel_platform
+         cp -r modules_and_devicetree/* .
 
       - name: Set up KernelSU Next
         run: |
