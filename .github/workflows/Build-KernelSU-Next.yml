@@ -54,7 +54,11 @@ jobs:
          KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
          sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
-        
+
+      - name: Print temp script content
+        id: print_temp_script
+        run: cat /home/runner/work/_temp/*.sh
+
       - name: Prepare build environment
         run: |
          cd kernel_workspace/kernel_platform/modules_and_devicetree
