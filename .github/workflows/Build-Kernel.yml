@@ -1,0 +1,88 @@
+name: Build Kernel non manifest
+on:
+  workflow_dispatch:
+    inputs:
+      CPUD:
+        description: "处理器代号"
+        required: true
+        default: 'pineapple'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Out
+        uses: actions/checkout@v3
+        
+      - name: Cleanup
+        uses: rokibhasansagar/slimhub_actions@main
+
+      - name: Configure Git
+        run: |
+         git config --global user.name "wuua"
+         git config --global user.email "3436678798@qq.com"
+
+      - name: Clean up disk space
+        run: |
+         sudo apt-get clean
+         sudo rm -rf /usr/share/dotnet /etc/mysql /var/lib/mysql
+         sudo rm -rf /usr/local/lib/android
+         df -h
+        
+      - name: Install dependencies
+        run: |
+         sudo apt update && sudo apt upgrade -y
+         sudo apt install -y python3 git curl
+
+      - name: Clone kernel repositories
+        run: |
+         mkdir -p kernel_workspace/msm-kernel
+         mkdir -p kernel_workspace/common
+         mkdir -p kernel_workspace/modules_and_devicetree
+         
+         cd kernel_workspace/msm-kernel
+         git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+         
+         cd ../common
+         git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+         
+         cd ../modules_and_devicetree
+         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+
+      - name: List cloned repositories content
+        run: |
+         ls -laR kernel_workspace/msm-kernel
+         ls -laR kernel_workspace/common
+         ls -laR kernel_workspace/modules_and_devicetree
+        
+      - name: Prepare build environment
+        run: |
+         cd kernel_workspace/modules_and_devicetree/kernel_platform/oplus/build
+         pwd
+         ls -l .
+         source oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
+         init_build_environment
+
+      - name: Build kernel
+        run: |
+         cd kernel_workspace/modules_and_devicetree/kernel_platform/oplus/build
+         ./oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
+
+      - name: Make AnyKernel3
+        run: |
+         git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1
+         rm -rf ./AnyKernel3/.git
+         cp kernel_workspace/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/Image ./AnyKernel3/
+
+      - name: Upload AnyKernel3
+        uses: actions/upload-artifact@v4
+        with:
+         name: AnyKernel3_KernelSU_Next_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+         path: ./AnyKernel3/*
+
+      - name: Upload boot.img
+        uses: actions/upload-artifact@v4
+        with:
+         name: boot_KernelSU_Next_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+         path: kernel_workspace/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/boot.img
