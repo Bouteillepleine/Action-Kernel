@@ -62,15 +62,15 @@ jobs:
       - name: Prepare build environment
         run: |
          cd kernel_workspace/kernel_platform/modules_and_devicetree
-         pwd # 显示当前工作目录
-         ls -l oplus/build/ # 列出 oplus/build/ 目录下的文件，确认 oplus_setup.sh 存在
+         pwd
+         ls -l oplus/build/
          source oplus/build/oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
          init_build_environment
 
       - name: Build kernel
         run: |
          cd kernel_workspace/kernel_platform/modules_and_devicetree
-         pwd # 显示当前工作目录
+         pwd
          ./oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
 
       - name: Make AnyKernel3
