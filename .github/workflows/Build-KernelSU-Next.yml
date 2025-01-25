@@ -46,6 +46,10 @@ jobs:
          git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/common
          git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/modules_and_devicetree
 
+      - name: List modules_and_devicetree directory content
+        run: |
+         ls -laR kernel_workspace/kernel_platform/modules_and_devicetree
+
       - name: Set up KernelSU
         run: |
          cd kernel_workspace/kernel_platform
@@ -54,20 +58,19 @@ jobs:
          KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
          sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
-
-      - name: Print temp script content
-        id: print_temp_script
-        run: cat /home/runner/work/_temp/*.sh
-
+        
       - name: Prepare build environment
         run: |
          cd kernel_workspace/kernel_platform/modules_and_devicetree
+         pwd # 显示当前工作目录
+         ls -l oplus/build/ # 列出 oplus/build/ 目录下的文件，确认 oplus_setup.sh 存在
          source oplus/build/oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
          init_build_environment
 
       - name: Build kernel
         run: |
          cd kernel_workspace/kernel_platform/modules_and_devicetree
+         pwd # 显示当前工作目录
          ./oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
 
       - name: Make AnyKernel3
