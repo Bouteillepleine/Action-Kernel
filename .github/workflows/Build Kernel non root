@@ -1,0 +1,58 @@
+name: Build Android Kernel
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout kernel source
+      uses: actions/checkout@v2
+      with:
+        repository: OnePlusOSS/android_kernel_oneplus_sm8650
+        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
+        path: kernel
+
+    - name: Checkout common kernel source
+      uses: actions/checkout@v2
+      with:
+        repository: OnePlusOSS/android_kernel_common_oneplus_sm8650
+        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
+        path: common
+
+    - name: Checkout modules and device tree
+      uses: actions/checkout@v2
+      with:
+        repository: OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650
+        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
+        path: modules_and_devicetree
+
+    - name: Set up environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+
+    - name: Set up ccache
+      uses: hendrikmuhs/ccache-action@v1
+
+    - name: Build kernel
+      run: |
+        cd kernel
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export KBUILD_BUILD_USER="GitHubActions"
+        export KBUILD_BUILD_HOST="runner"
+        
+        make O=out CCACHE_DIR=/tmp/ccache CC=ccache clang O=out oneplus_sm8650_defconfig
+        make O=out CCACHE_DIR=/tmp/ccache CC=ccache clang -j$(nproc --all)
+
+    - name: Upload kernel artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: kernel-artifacts
+        path: kernel/out/arch/arm64/boot/
