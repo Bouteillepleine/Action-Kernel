@@ -1,47 +1,42 @@
-name: Build Android Kernel
+name: build_kernel
 
 on:
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-20.04
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Set up environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev bc git
-
-    - name: Clone kernel source
-      run: |
-        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git kernel
-        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git kernel/common
-        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git kernel/modules
-        cd kernel
-        if [ -f .gitmodules ]; then
-          git submodule sync
-          git submodule update --init --recursive
-        fi
-
-    - name: Set up build environment
-      run: |
-        export ARCH=arm64
-        export SUBARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-gnu-
-        export PATH=$PATH:/usr/bin
-
-    - name: Build kernel
-      run: |
-        cd kernel
-        make oneplus/sm8650_v_15.0.0_oneplus_ace5_defconfig
-        make -j$(nproc)
-
-    - name: Archive build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: kernel-build
-        path: kernel/arch/arm64/boot/Image.gz-dtb
+      - uses: actions/checkout@v2
+      - name: set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: set up environment
+        run: |
+          echo "安装依赖"
+          sudo apt update -y
+          sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev unzip zipalign language-pack-zh-hans
+      - name: pull kernel and complier
+        run: |
+          echo "拉取源码和编译器"
+          git clone --depth=1 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5  #修改内核源码地址和分支名称
+          echo "拉取源码完成"
+          git clone --depth=1 https://github.com/kdrag0n/proton-clang -b master
+          echo "拉取编译器完成"
+      - name: build kernel
+        run: |
+          echo "开始编译内核"
+          wget https://raw.githubusercontent.com/zahi0/build_kernel/main/build_tool.sh  #修改为fork之后的地址
+          chmod +x build_tool.sh
+          ./build_tool.sh
+      - name : upload 
+        uses: actions/upload-artifact@master
+        if: always()
+        with:
+          name: kernel
+          path: ${{ github.workspace }}/kernel_src/Image.gz-dtb
+#       - name: Release
+#         uses: softprops/action-gh-release@v1
+#         with:
+#           files: ${{ github.workspace }}/kernel_src/Image.gz-dtb
