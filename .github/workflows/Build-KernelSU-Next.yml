@@ -41,13 +41,23 @@ jobs:
 
       - name: Clone kernel repositories
         run: |
-         mkdir kernel_workspace && cd kernel_workspace
-         git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/msm-kernel
-         git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/common
-         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/modules_and_devicetree
+         mkdir -p kernel_workspace/kernel_platform/msm-kernel
+         mkdir -p kernel_workspace/kernel_platform/common
+         mkdir -p kernel_workspace/kernel_platform/modules_and_devicetree
+         
+         cd kernel_workspace/kernel_platform/msm-kernel
+         git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+         
+         cd ../common
+         git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
+         
+         cd ../modules_and_devicetree
+         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
 
-      - name: List modules_and_devicetree directory content
+      - name: List cloned repositories content
         run: |
+         ls -laR kernel_workspace/kernel_platform/msm-kernel
+         ls -laR kernel_workspace/kernel_platform/common
          ls -laR kernel_workspace/kernel_platform/modules_and_devicetree
 
       - name: Set up KernelSU
