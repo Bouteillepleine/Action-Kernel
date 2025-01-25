@@ -41,11 +41,11 @@ jobs:
 
       - name: Clone kernel repositories
         run: |
-         mkdir -p kernel_workspace/kernel_platform/msm-kernel
-         mkdir -p kernel_workspace/kernel_platform/common
-         mkdir -p kernel_workspace/kernel_platform/modules_and_devicetree
+         mkdir -p kernel_workspace/msm-kernel
+         mkdir -p kernel_workspace/common
+         mkdir -p kernel_workspace/modules_and_devicetree
          
-         cd kernel_workspace/kernel_platform/msm-kernel
+         cd kernel_workspace/msm-kernel
          git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 .
          
          cd ../common
@@ -56,13 +56,13 @@ jobs:
 
       - name: List cloned repositories content
         run: |
-         ls -laR kernel_workspace/kernel_platform/msm-kernel
-         ls -laR kernel_workspace/kernel_platform/common
-         ls -laR kernel_workspace/kernel_platform/modules_and_devicetree
+         ls -laR kernel_workspace/msm-kernel
+         ls -laR kernel_workspace/common
+         ls -laR kernel_workspace/modules_and_devicetree
 
       - name: Set up KernelSU
         run: |
-         cd kernel_workspace/kernel_platform
+         cd kernel_workspace
          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.0.3
          cd KernelSU-Next
          KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
@@ -71,7 +71,7 @@ jobs:
         
       - name: Prepare build environment
         run: |
-         cd kernel_workspace/kernel_platform/modules_and_devicetree/kernel_platform/oplus/build
+         cd kernel_workspace/modules_and_devicetree/kernel_platform/oplus/build
          pwd
          ls -l .
          source oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
@@ -79,14 +79,14 @@ jobs:
 
       - name: Build kernel
         run: |
-         cd kernel_workspace/kernel_platform/modules_and_devicetree/kernel_platform/oplus/build
+         cd kernel_workspace/modules_and_devicetree/kernel_platform/oplus/build
          ./oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
 
       - name: Make AnyKernel3
         run: |
          git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1
          rm -rf ./AnyKernel3/.git
-         cp kernel_workspace/kernel_platform/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/Image ./AnyKernel3/
+         cp kernel_workspace/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/Image ./AnyKernel3/
 
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
@@ -98,4 +98,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
          name: boot_KernelSU_Next_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
-         path: kernel_workspace/kernel_platform/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/boot.img
+         path: kernel_workspace/modules_and_devicetree/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/boot.img
