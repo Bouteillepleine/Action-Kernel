@@ -2,10 +2,6 @@ name: Build KernelSU Next non manifest
 on:
   workflow_dispatch:
     inputs:
-      CPU:
-        description: "分支"
-        required: true
-        default: 'sm8650'
       CPUD:
         description: "处理器代号"
         required: true
