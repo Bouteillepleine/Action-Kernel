@@ -61,17 +61,16 @@ jobs:
         
       - name: Prepare build environment
         run: |
-         cd kernel_workspace/kernel_platform/modules_and_devicetree
+         cd kernel_workspace/kernel_platform/modules_and_devicetree/kernel_platform/oplus/build
          pwd
-         ls -l oplus/build/
-         source oplus/build/oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
+         ls -l .
+         source oplus_setup.sh ${{ github.event.inputs.CPUD }} gki
          init_build_environment
 
       - name: Build kernel
         run: |
-         cd kernel_workspace/kernel_platform/modules_and_devicetree
-         pwd
-         ./oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
+         cd kernel_workspace/kernel_platform/modules_and_devicetree/kernel_platform/oplus/build
+         ./oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
 
       - name: Make AnyKernel3
         run: |
