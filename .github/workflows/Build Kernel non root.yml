@@ -1,58 +1,42 @@
 name: Build Android Kernel
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:  # 允许手动触发工作流
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # 使用最新的 Ubuntu 镜像
 
     steps:
-    - name: Checkout kernel source
-      uses: actions/checkout@v2
-      with:
-        repository: OnePlusOSS/android_kernel_oneplus_sm8650
-        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
-        path: kernel
-
-    - name: Checkout common kernel source
-      uses: actions/checkout@v2
-      with:
-        repository: OnePlusOSS/android_kernel_common_oneplus_sm8650
-        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
-        path: common
-
-    - name: Checkout modules and device tree
-      uses: actions/checkout@v2
-      with:
-        repository: OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650
-        ref: oneplus/sm8650_v_15.0.0_oneplus_ace5
-        path: modules_and_devicetree
+    - name: Checkout repository
+      uses: actions/checkout@v3  # 检出当前仓库
 
     - name: Set up environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf lib32ncurses5-dev lib32z1-dev liblz4-tool libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+        sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev bc git
 
-    - name: Set up ccache
-      uses: hendrikmuhs/ccache-action@v1
+    - name: Clone kernel source
+      run: |
+        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git kernel
+        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git kernel/common
+        git clone --depth=1 --branch oneplus/sm8650_v_15.0.0_oneplus_ace5 https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git kernel/modules
+
+    - name: Set up build environment
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        export PATH=$PATH:/usr/bin
 
     - name: Build kernel
       run: |
         cd kernel
-        export ARCH=arm64
-        export SUBARCH=arm64
-        export KBUILD_BUILD_USER="GitHubActions"
-        export KBUILD_BUILD_HOST="runner"
-        
-        make O=out CCACHE_DIR=/tmp/ccache CC=ccache clang O=out oneplus_sm8650_defconfig
-        make O=out CCACHE_DIR=/tmp/ccache CC=ccache clang -j$(nproc --all)
+        make oneplus/sm8650_v_15.0.0_oneplus_ace5_defconfig
+        make -j$(nproc)
 
-    - name: Upload kernel artifacts
-      uses: actions/upload-artifact@v2
+    - name: Archive build artifacts
+      uses: actions/upload-artifact@v3
       with:
-        name: kernel-artifacts
-        path: kernel/out/arch/arm64/boot/
+        name: kernel-build
+        path: kernel/arch/arm64/boot/Image.gz-dtb
