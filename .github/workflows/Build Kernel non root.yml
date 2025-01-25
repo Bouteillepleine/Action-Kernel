@@ -20,7 +20,7 @@ jobs:
       - name: pull kernel and complier
         run: |
           echo "拉取源码和编译器"
-          git clone --depth=1 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5  #修改内核源码地址和分支名称
+          git clone --depth=1 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_src #修改内核源码地址和分支名称
           echo "拉取源码完成"
           git clone --depth=1 https://github.com/kdrag0n/proton-clang -b master
           echo "拉取编译器完成"
