@@ -8,8 +8,8 @@ on:
         default: 'sm8650'
       FEIL:
         description: "配置文件"
-        required: false
-        default: ''
+        required: true
+        default: 'oneplus_ace5'
       CPUD:
         description: "处理器代号"
         required: true
@@ -41,24 +41,28 @@ jobs:
       - name: Configure Git
         run: |
          git config --global user.name "build"
-         git config --global user.email "3436378798@qq.com"
+         git config --global user.email "543069760@qq.com"
 
       - name: Install dependencies
         run: |
          sudo apt update && sudo apt upgrade -y
          sudo apt install -y python3 git curl
 
-      - name: Clone kernel repositories
+      - name: Install repo tool
+        run: |
+         curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
+         chmod a+x ~/repo
+         sudo mv ~/repo /usr/local/bin/repo
+
+      - name: Initialize repo and sync
         run: |
          mkdir kernel_workspace && cd kernel_workspace
-         git clone https://github.com/OnePlusOSS/android_kernel_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/msm-kernel
-         git clone https://github.com/OnePlusOSS/android_kernel_common_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/common
-         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8650.git -b oneplus/sm8650_v_15.0.0_oneplus_ace5 kernel_platform/modules_and_devicetree
-
-      - name: Copy necessary files
-        run: |
-         cd kernel_workspace/kernel_platform
-         cp -r modules_and_devicetree/* .
+         repo init -u https://github.com/543069760/kernel_manifest.git -b refs/heads/oneplus/${{ github.event.inputs.CPU }} -m ${{ github.event.inputs.FEIL }}.xml --depth=1
+         repo sync
+         rm kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
+         rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
+         sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
+         sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
 
       - name: Set up KernelSU Next
         run: |
