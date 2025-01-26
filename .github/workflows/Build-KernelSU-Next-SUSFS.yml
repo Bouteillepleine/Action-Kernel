@@ -1,4 +1,4 @@
-name: Build KernelSU Next SUSFS
+name: Build Oonplus Ace5 KernelSU Next SUSFS
 on:
   workflow_dispatch:
     inputs:
