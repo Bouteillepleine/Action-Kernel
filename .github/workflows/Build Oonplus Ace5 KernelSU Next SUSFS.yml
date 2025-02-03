@@ -109,7 +109,7 @@ jobs:
           ./kernel_platform/oplus/build/oplus_build_kernel.sh \
             ${{ github.event.inputs.CPUD }} \
             gki \
-            BUILD_CONFIG=msm-kernel/build.config.gki.vendor \
+            BUILD_CONFIG=msm-kernel/build.config.msm.gki.vendor \
             SKIP_MRPROPER=1
           
       - name: Package AnyKernel3
