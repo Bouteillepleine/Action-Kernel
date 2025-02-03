@@ -116,8 +116,8 @@ jobs:
       - name: Enable BBR v3 in kernel config
         run: |
           cd kernel_workspace/kernel_platform
-          echo "CONFIG_TCP_CONG_BBR=y" >> arch/${{ github.event.inputs.CPUD }}/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_BBR=m" >> arch/${{ github.event.inputs.CPUD }}/configs/gki_defconfig
+          echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/gki_defconfig
+          echo "CONFIG_TCP_CONG_BBR=m" >> arch/arm64/configs/gki_defconfig
                   
       - name: Build kernel
         run: |
