@@ -27,17 +27,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    steps:
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          root-reserve-mb: 8192
-          temp-reserve-mb: 2048
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          
+    steps: 
       - name: Set swap
         run: |
           export SWAP_FILE=$(swapon --show=NAME | tail -n 1)
@@ -49,6 +39,16 @@ jobs:
           sudo swapon /swap_filex
           df -h
           free -h
+          
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 2048
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
           
       - name: Configure Git
         run: |      
