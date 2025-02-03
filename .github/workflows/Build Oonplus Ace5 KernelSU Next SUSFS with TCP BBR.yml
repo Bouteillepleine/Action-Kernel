@@ -101,47 +101,24 @@ jobs:
           # Commit changes
           git add -A && git commit -m "BUILD: Apply SUSFS patches"
           
-      - name: Configure TCP BBR
+      - name: Add BBR v3 remote and fetch code
         run: |
-          cd kernel_workspace/kernel_platform/common
+          cd kernel_workspace/kernel_platform
+          git remote add google-bbr https://github.com/google/bbr.git
+          git fetch google-bbr
+          git checkout google-bbr/v3
           
-          echo "=== 开始验证配置文件路径 ==="
-          echo "当前路径：$(pwd)"
-          find . -type f -name "gki_defconfig" | grep "arch/arm64/configs/gki_defconfig" || echo "⚠️  未找到目标文件"
+      - name: Apply BBR v3 patches
+        run: |
+          cd kernel_workspace/kernel_platform
+          git merge google-bbr/v3 --allow-unrelated-histories -m "Merge BBR v3 into kernel"
           
-          echo "=== 列出 arch/arm64/configs 目录 ==="
-          ls -lh arch/arm64/configs/
-          
-          echo "=== 确认 gki_defconfig 文件存在性 ==="
-          if [ -f arch/arm64/configs/gki_defconfig ]; then
-            echo "✅ 找到文件：arch/arm64/configs/gki_defconfig"
-            echo "文件大小：$(du -h arch/arm64/configs/gki_defconfig | cut -f1)"
-          else
-            echo "❌ 致命错误：gki_defconfig 不存在！"
-            exit 1
-          fi
-          
-          # 使用 sed 替换或修改配置项，避免重复追加
-          sed -i 's/^# CONFIG_TCP_CONG_BBR is not set/CONFIG_TCP_CONG_BBR=y/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^CONFIG_TCP_CONG_BBR=.*/CONFIG_TCP_CONG_BBR=y/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^CONFIG_DEFAULT_TCP_CONG=.*/CONFIG_DEFAULT_TCP_CONG="bbr"/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^# CONFIG_NET_SCH_FQ is not set/CONFIG_NET_SCH_FQ=y/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^CONFIG_NET_SCH_FQ=.*/CONFIG_NET_SCH_FQ=y/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^# CONFIG_IPV6 is not set/CONFIG_IPV6=y/' arch/arm64/configs/gki_defconfig
-          sed -i 's/^CONFIG_IPV6=.*/CONFIG_IPV6=y/' arch/arm64/configs/gki_defconfig
-          
-          echo "=== 修改后的配置片段 ==="
-          grep -E "CONFIG_TCP_CONG_BBR|CONFIG_DEFAULT_TCP_CONG|CONFIG_NET_SCH_FQ|CONFIG_IPV6" arch/arm64/configs/gki_defconfig
-          
-          # 强制添加文件
-          git add -f arch/arm64/configs/gki_defconfig
-          
-          # 检查状态
-          git status
-          
-          # 提交更改
-          git commit -m "NET: Enable TCP BBR congestion control"
-          
+      - name: Enable BBR v3 in kernel config
+        run: |
+          cd kernel_workspace/kernel_platform
+          echo "CONFIG_TCP_CONG_BBR=y" >> arch/${{ github.event.inputs.CPUD }}/configs/gki_defconfig
+          echo "CONFIG_TCP_CONG_BBR=m" >> arch/${{ github.event.inputs.CPUD }}/configs/gki_defconfig
+                  
       - name: Build kernel
         run: |
           cd kernel_workspace
