@@ -135,9 +135,11 @@ jobs:
             echo "Error: $CONFIG_PATH not found."
             exit 1
           fi
+          # 删除旧的 BBR 配置项
+          sed -i '/CONFIG_TCP_CONG_BBR/d' $CONFIG_PATH
+          # 添加新的 BBR 配置项
           echo "CONFIG_TCP_CONG_BBR=y" >> $CONFIG_PATH
-          echo "CONFIG_TCP_CONG_BBR=m" >> $CONFIG_PATH
-                  
+          
       - name: Build kernel
         run: |
           cd kernel_workspace
