@@ -94,7 +94,7 @@ jobs:
 
            # Apply patches
            cd ./KernelSU-Next
-           cp ../Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch ./
+           cp .../Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch ./
            patch -p1 -F 3 < Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
            #patch -p1 --forward < 10_enable_susfs_for_ksu.patch || true
            #cd ../common
@@ -104,7 +104,7 @@ jobs:
            #git add -A && git commit -a -m "BUILD Kernel"
            #cd ..
            #cd ./msm-kernel && git add -A && git commit -a -m "BUILD Kernel"
-           cd ..
+           #cd ..
              
            #cp ../kernel_patches/apk_sign.c_fix.patch ./
            #patch -p1 -F 3 < apk_sign.c_fix.patch
