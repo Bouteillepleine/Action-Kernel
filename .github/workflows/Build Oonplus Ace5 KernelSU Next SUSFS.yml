@@ -1,4 +1,4 @@
-name: Build Oonplus Ace5 KernelSU Next SUSFS with TCP BBR
+name: Build Oonplus Ace5 KernelSU Next SUSFS
 on:
   workflow_dispatch:
     inputs:
@@ -101,35 +101,7 @@ jobs:
           
           # Commit changes
           git add -A && git commit -m "BUILD: Apply SUSFS patches"
-          
-      - name: Configure TCP BBR
-        run: |
-          cd kernel_workspace/kernel_platform/common
-          
-          # 备份原始配置文件
-          cp arch/arm64/configs/gki_defconfig arch/arm64/configs/gki_defconfig.bak
-          
-          # 添加 BBR 配置项
-          echo 'CONFIG_TCP_CONG_BBR=y' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_DEFAULT_TCP_CONG="bbr"' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_NET_SCH_FQ=y' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_IPV6=y' >> arch/arm64/configs/gki_defconfig
-          
-          # 确保配置项不会被覆盖
-          sed -i '/CONFIG_TCP_CONG_BBR/d' arch/arm64/configs/gki_defconfig
-          sed -i '/CONFIG_DEFAULT_TCP_CONG/d' arch/arm64/configs/gki_defconfig
-          sed -i '/CONFIG_NET_SCH_FQ/d' arch/arm64/configs/gki_defconfig
-          sed -i '/CONFIG_IPV6/d' arch/arm64/configs/gki_defconfig
-          
-          echo 'CONFIG_TCP_CONG_BBR=y' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_DEFAULT_TCP_CONG="bbr"' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_NET_SCH_FQ=y' >> arch/arm64/configs/gki_defconfig
-          echo 'CONFIG_IPV6=y' >> arch/arm64/configs/gki_defconfig
-          
-          # 提交更改
-          git add arch/arm64/configs/gki_defconfig
-          git commit -m "NET: Enable TCP BBR congestion control"
-          
+                  
       - name: Build kernel
         run: |
           cd kernel_workspace
