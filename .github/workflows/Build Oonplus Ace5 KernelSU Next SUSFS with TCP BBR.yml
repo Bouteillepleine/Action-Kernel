@@ -103,37 +103,37 @@ jobs:
           
       - name: Configure TCP BBR
         run: |
-          cd kernel_workspace/kernel_platform/msm-kernel
+          cd kernel_workspace/kernel_platform/common
           
           # 新增目录结构验证
           echo "=== 开始验证配置文件路径 ==="
           echo "当前路径：$(pwd)"
           echo "├── 递归查找 gki_defconfig"
-          find . -type f -name "gki_defconfig" | grep "vendor/gki_defconfig" || echo "⚠️  未找到目标文件"
+          find . -type f -name "gki_defconfig" | grep "arch/arm64/configs/gki_defconfig" || echo "⚠️  未找到目标文件"
           
-          echo "├── 列出 arch/arm64/configs/vendor 目录"
-          ls -lh arch/arm64/configs/vendor/
+          echo "├── 列出 arch/arm64/configs 目录"
+          ls -lh arch/arm64/configs/
           
           echo "├── 确认目标文件存在性"
-          if [ -f arch/arm64/configs/vendor/gki_defconfig ]; then
-            echo "✅ 找到文件：arch/arm64/configs/vendor/gki_defconfig"
-            echo "文件大小：$(du -h arch/arm64/configs/vendor/gki_defconfig | cut -f1)"
+          if [ -f arch/arm64/configs/gki_defconfig ]; then
+            echo "✅ 找到文件：arch/arm64/configs/gki_defconfig"
+            echo "文件大小：$(du -h arch/arm64/configs/gki_defconfig | cut -f1)"
           else
             echo "❌ 致命错误：gki_defconfig 不存在！"
             exit 1
           fi
           
           # 原始BBR配置
-          echo 'CONFIG_TCP_CONG_BBR=y' >> arch/arm64/configs/vendor/gki_defconfig
-          echo 'CONFIG_DEFAULT_TCP_CONG="bbr"' >> arch/arm64/configs/vendor/gki_defconfig
-          echo 'CONFIG_NET_SCH_FQ=y' >> arch/arm64/configs/vendor/gki_defconfig
-          echo 'CONFIG_IPV6=y' >> arch/arm64/configs/vendor/gki_defconfig
+          echo 'CONFIG_TCP_CONG_BBR=y' >> arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_DEFAULT_TCP_CONG="bbr"' >> arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_NET_SCH_FQ=y' >> arch/arm64/configs/gki_defconfig
+          echo 'CONFIG_IPV6=y' >> arch/arm64/configs/gki_defconfig
           
           # 显示修改后的配置
           echo "=== 修改后的配置片段 ==="
-          grep -E "CONFIG_TCP_CONG_BBR|CONFIG_DEFAULT_TCP_CONG|CONFIG_NET_SCH_FQ|CONFIG_IPV6" arch/arm64/configs/vendor/gki_defconfig
+          grep -E "CONFIG_TCP_CONG_BBR|CONFIG_DEFAULT_TCP_CONG|CONFIG_NET_SCH_FQ|CONFIG_IPV6" arch/arm64/configs/gki_defconfig
           
-          git add arch/arm64/configs/vendor/gki_defconfig
+          git add arch/arm64/configs/gki_defconfig
           git commit -m "NET: Enable TCP BBR congestion control"
           
       - name: Build kernel
