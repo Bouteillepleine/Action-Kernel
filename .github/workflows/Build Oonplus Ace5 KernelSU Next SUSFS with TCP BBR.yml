@@ -69,10 +69,8 @@ jobs:
           
       - name: List directory contents after sync
         run: |
-          cd kernel_workspace/kernel_platform
-          ls -la arch/
-          ls -la arch/arm64/
-          ls -la arch/arm64/configs/
+          cd kernel_workspace
+          ls -laR
 
       - name: Set up KernelSU Next
         run: |
