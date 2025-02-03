@@ -85,6 +85,7 @@ jobs:
            cd kernel_workspace
            git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
            git clone https://github.com/TheWildJames/kernel_patches.git
+           curl -O https://raw.githubusercontent.com/TanakaLun/kernel_patches4mksu/refs/heads/main/Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
            cd kernel_platform
            cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU-Next/
            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
@@ -111,6 +112,8 @@ jobs:
            
            cp ../kernel_patches/selinux.c_fix.patch ./
            patch -p1 -F 3 < selinux.c_fix.patch
+           cp ../Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch ./
+           patch -p1 -F 3 < Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
            
       - name: Build kernel
         run: |
