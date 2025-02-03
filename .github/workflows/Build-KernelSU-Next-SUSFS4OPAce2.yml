@@ -94,6 +94,7 @@ jobs:
 
            # Apply patches
            cd ./KernelSU-Next
+           cd ..
            cp .../Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch ./
            patch -p1 -F 3 < Implement-SUSFS-v1.5.4-for-KernelSU-Next.patch
            #patch -p1 --forward < 10_enable_susfs_for_ksu.patch || true
