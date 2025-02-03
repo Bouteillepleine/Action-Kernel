@@ -1,4 +1,4 @@
-name: Build Oonplus Ace5 KernelSU Next SUSFS with TCP BBR v3
+name: Build Oonplus Ace5 KernelSU Next SUSFS with TCP BBR
 
 on:
   workflow_dispatch:
@@ -102,25 +102,16 @@ jobs:
           # Commit changes
           git add -A && git commit -m "BUILD: Apply SUSFS patches"
           
-      - name: Configure TCP BBR v3
+      - name: Configure TCP BBR
         run: |
           cd kernel_workspace/kernel_platform/common
           
-          # Fetch BBR v3 source
-          git remote add google-bbr https://github.com/google/bbr.git
-          git fetch google-bbr
-          git checkout -b bbr-v3 google-bbr/v3
-          
-          # Copy BBR v3 files into your kernel source
-          cp -r net/ipv4/tcp_bbr*.c ../net/ipv4/
-          cp -r include/net/tcp_bbr*.h ../include/net/
-          
-          # Update kernel config for BBR v3
-          echo "=== Configuring BBR v3 ==="
+          # Update kernel config for BBR
+          echo "=== Configuring BBR ==="
           sed -i '/CONFIG_TCP_CONG_BBR/d' ../arch/arm64/configs/gki_defconfig
           sed -i '/CONFIG_DEFAULT_TCP_CONG/d' ../arch/arm64/configs/gki_defconfig
           
-          # Add BBR v3 configurations
+          # Add BBR configurations
           cat >> ../arch/arm64/configs/gki_defconfig << EOF
           CONFIG_TCP_CONG_BBR=y
           CONFIG_DEFAULT_TCP_CONG="bbr"
@@ -129,8 +120,8 @@ jobs:
           EOF
           
           # Commit changes
-          git add ../net/ipv4/tcp_bbr*.c ../include/net/tcp_bbr*.h ../arch/arm64/configs/gki_defconfig
-          git commit -m "NET: Integrate TCP BBR v3 congestion control"
+          git add ../arch/arm64/configs/gki_defconfig
+          git commit -m "NET: Enable TCP BBR congestion control"
           
       - name: Build kernel
         run: |
