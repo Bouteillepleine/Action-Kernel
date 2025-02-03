@@ -61,9 +61,11 @@ jobs:
          repo sync         
          find kernel_platform/common/android/ -name "abi_gki_protected_exports_*" -delete
          find kernel_platform/msm-kernel/android/ -name "abi_gki_protected_exports_*" -delete
-         sed -i 's/ -dirty/ -Mortis/g' kernel_platform/common/scripts/setlocalversion
-         sed -i 's/ -dirty/ -Mortis/g' kernel_platform/msm-kernel/scripts/setlocalversion   
-         
+         sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
+         sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
+         sed -i '$s|echo "\$res"|echo "$res-Mortis"|' kernel_platform/common/scripts/setlocalversion            
+         sed -i '$s|echo "\$res"|echo "$res-Mortis"|' kernel_platform/msm-kernel/scripts/setlocalversion            
+        
       - name: Set LTO to THIN
         run: |
          cd kernel_workspace/kernel_platform
@@ -74,7 +76,12 @@ jobs:
       - name: Set up MKSU
         run: |
          cd kernel_workspace/kernel_platform
-         curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/refs/heads/main/kernel/setup.sh" | sed 's#https://github.com/tiann/KernelSU#https://github.com/5ec1cff/KernelSU#g' | bash -
+         curl -LSs "https://raw.githubusercontent.com/5ec1cff/KernelSU/refs/heads/main/kernel/setup.sh" | bash -
+         cd KernelSU         
+         git revert -m 1 3a73585 -n
+         KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
+         echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+         sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
         
       - name: Set up susfs
         run: |
@@ -83,6 +90,7 @@ jobs:
            git clone https://github.com/TanakaLun/kernel_patches4mksu.git
            cd kernel_platform
            cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+           cp ../kernel_patches4mksu/mksu_susfs.patch ./KernelSU/           
            cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
            cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
            cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
@@ -90,6 +98,7 @@ jobs:
            # Apply patches
            cd ./KernelSU
            patch -p1 --forward < 10_enable_susfs_for_ksu.patch || true
+           patch -p1 --forward < mksu_susfs.patch || true
            cd ../common
            patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
            cp ../../kernel_patches4mksu/69_hide_stuff.patch ./
@@ -98,57 +107,31 @@ jobs:
            cd ..
            cd ./msm-kernel && git add -A && git commit -a -m "BUILD Kernel"
            cd ..
-             
-           #cp ../kernel_patches4mksu/apk_sign.c_fix.patch ./
-           #patch -p1 -F 3 < apk_sign.c_fix.patch
-             
-           #cp ../kernel_patches4mksu/core_hook.c_fix.patch ./
-           #patch -p1 --fuzz=3 < ./core_hook.c_fix.patch
-           
-           #old_umount='try_umount("'
-           #new_umount='ksu_try_umount("'
-           #old_zygote='is_zygote(old->security);'
-           #new_zygote='ksu_is_zygote(old->security);'
-           #sed -i "/ksu_try/! s#$old_umount#$new_umount#g" KernelSU/kernel/core_hook.c
-           #sed -i "/ksu_try/! s#$old_zygote#$new_zygote#g" KernelSU/kernel/core_hook.c
-           #sed -i '979a\#ifndef CONFIG_KSU_SUSFS_SUS_MOUNT' KernelSU/kernel/core_hook.c
-           #sed -i '984a\#endif' KernelSU/kernel/core_hook.c
-           rm KernelSU/kernel/core_hook.c
-           cp ../kernel_patches4mksu/core_hook.c kernel
-           ls kernel/core_hook.c 
-           #patch -p1 -F 3 < 2core_hook.patch
-           #sed -i '954s/^/# /' KernelSU/kernel/core_hook.c
-           #cp ../kernel_patches4mksu/selinux.c_fix.patch ./
-           #patch -p1 -F 3 < selinux.c_fix.patch
-           #cd
-           #grep -rnw . -e 'ksu_try_'
-           #find . -type f -exec sed -i 's/ksu_try_/try_/g' {} +           
            
       - name: Build kernel
         run: |
-         sed -i '/pts_unix98_lookup_kp/ s#^#////#' kernel_workspace/kernel_platform/common/drivers/kernelsu/sucompat.c
          cd kernel_workspace
          ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
          
       - name: Make AnyKernel3
         run: |
-         git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1
+         git clone https://github.com/TanakaLun/AnyKernel3 --depth=1
          rm -rf ./AnyKernel3/.git
          cp kernel_workspace/kernel_platform/out/msm-${{ github.event.inputs.CPUD }}-${{ github.event.inputs.CPUD }}-gki/dist/Image ./AnyKernel3/
-         
-      - name: Download SUSFS Module
+
+      - name: Download latest susfs4ksu module
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          wget https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2-v1.5.4-R13/ksu_module_susfs_1.5.2+.zip
+          LATEST_URL=$(curl -sSLH "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/sidex15/susfs4ksu-module/releases/latest \
+            | jq -r '.assets[] | select(.name | test("ksu_module_susfs_1.5.2\\+.*\\.zip")) | .browser_download_url')
+          curl -LO "$LATEST_URL"
+          echo "Downloaded file: $(ls ksu_module_susfs_1.5.2+*.zip)"         
           mv ksu_module_susfs_1.5.2+.zip ./AnyKernel3/
           
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
         with:
-         name: AnyKernel3_KernelSU_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
+         name: AnyKernel3_MKSU_${{ env.KSUVER }}_${{ github.event.inputs.FEIL }}
          path: ./AnyKernel3/*
-
-      - name: Upload core
-        uses: actions/upload-artifact@v4
-        with:
-         name: core_hook.c
-         path: kernel_workspace/kernel_platform/KernelSU/kernel
