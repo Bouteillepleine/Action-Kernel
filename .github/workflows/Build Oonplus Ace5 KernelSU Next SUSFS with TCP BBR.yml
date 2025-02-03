@@ -106,10 +106,27 @@ jobs:
             echo "Error: $CONFIG_PATH not found."
             exit 1
           fi
+          
+          # 确保 Makefile 存在
+          if [ ! -f "Makefile" ]; then
+            echo "Error: Makefile not found. Repo sync may have failed."
+            exit 1
+          fi
+
+          # 修改配置
           sed -i '/CONFIG_TCP_CONG_BBR/d' $CONFIG_PATH
           echo "CONFIG_TCP_CONG_BBR=y" >> $CONFIG_PATH
           echo "CONFIG_DEFAULT_TCP_CONG=\"bbr\"" >> $CONFIG_PATH
-          make O=out/android14-6.1 savedefconfig || { echo "Error: savedefconfig failed"; exit 1; }
+          
+          # 重新初始化环境
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          source msm-kernel/build.config.gki.vendor
+
+          # 运行 savedefconfig
+          make O=out/android14-6.1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- savedefconfig || { echo "Error: savedefconfig failed"; exit 1; }
+
+          # 检查是否应用成功
           diff <(grep CONFIG_TCP_CONG_BBR common/arch/arm64/configs/gki_defconfig) <(grep CONFIG_TCP_CONG_BBR out/android14-6.1/common/defconfig) || { echo "Error: Configuration mismatch detected!"; exit 1; }
 
       - name: Build kernel
