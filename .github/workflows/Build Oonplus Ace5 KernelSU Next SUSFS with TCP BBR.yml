@@ -1,4 +1,4 @@
-name: Build Oonplus Ace5 KernelSU Next SUSFS
+name: Build Oonplus Ace5 KernelSU Next SUSFS with TCP BBR
 on:
   workflow_dispatch:
     inputs:
