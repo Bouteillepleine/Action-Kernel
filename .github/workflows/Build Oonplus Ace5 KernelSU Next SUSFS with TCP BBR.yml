@@ -1,4 +1,5 @@
 name: Build Oonplus Ace5 KernelSU Next SUSFS with TCP BBR
+
 on:
   workflow_dispatch:
     inputs:
@@ -66,6 +67,13 @@ jobs:
           # Clean dirty markers
           find . -name setlocalversion -exec sed -i 's/ -dirty//g' {} +
           
+      - name: List directory contents after sync
+        run: |
+          cd kernel_workspace/kernel_platform
+          ls -la arch/
+          ls -la arch/arm64/
+          ls -la arch/arm64/configs/
+
       - name: Set up KernelSU Next
         run: |
           cd kernel_workspace/kernel_platform
@@ -106,18 +114,31 @@ jobs:
           cd kernel_workspace/kernel_platform
           git remote add google-bbr https://github.com/google/bbr.git
           git fetch google-bbr
-          git checkout google-bbr/v3
           
-      - name: Apply BBR v3 patches
+      - name: Check if BBR v3 branch exists
+        run: |
+          cd kernel_workspace/kernel_platform
+          git show-ref --verify --quiet refs/remotes/google-bbr/v3
+          if [ $? -ne 0 ]; then
+            echo "Error: google-bbr/v3 branch does not exist."
+            exit 1
+          fi
+          
+      - name: Merge BBR v3 into kernel
         run: |
           cd kernel_workspace/kernel_platform
           git merge google-bbr/v3 --allow-unrelated-histories -m "Merge BBR v3 into kernel"
           
-      - name: Enable BBR v3 in kernel config
+      - name: Check and enable BBR v3 in kernel config
         run: |
           cd kernel_workspace/kernel_platform
-          echo "CONFIG_TCP_CONG_BBR=y" >> arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TCP_CONG_BBR=m" >> arch/arm64/configs/gki_defconfig
+          CONFIG_PATH="arch/arm64/configs/gki_defconfig"
+          if [ ! -f "$CONFIG_PATH" ]; then
+            echo "Error: $CONFIG_PATH not found."
+            exit 1
+          fi
+          echo "CONFIG_TCP_CONG_BBR=y" >> $CONFIG_PATH
+          echo "CONFIG_TCP_CONG_BBR=m" >> $CONFIG_PATH
                   
       - name: Build kernel
         run: |
