@@ -119,7 +119,7 @@ jobs:
           cd ../../../../
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          source msm-kernel/build.config.msm.gki
+          source msm-kernel/build.config.gki.vendor
 
           # 运行 savedefconfig
           make O=out/android14-6.1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- savedefconfig || { echo "Error: savedefconfig failed"; exit 1; }
