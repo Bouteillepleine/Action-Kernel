@@ -100,25 +100,23 @@ jobs:
 
       - name: Check and enable BBR v3 in kernel config
         run: |
-          cd kernel_workspace/kernel_platform
-          CONFIG_PATH="common/arch/arm64/configs/gki_defconfig"
+          cd kernel_workspace/kernel_platform/common/arch/arm64/configs
+
+          # 确保 gki_defconfig 存在
+          CONFIG_PATH="./gki_defconfig"
           if [ ! -f "$CONFIG_PATH" ]; then
-            echo "Error: $CONFIG_PATH not found."
+            echo "Error: $CONFIG_PATH not found!"
             exit 1
           fi
-          
-          # 确保 Makefile 存在
-          if [ ! -f "Makefile" ]; then
-            echo "Error: Makefile not found. Repo sync may have failed."
-            exit 1
-          fi
+          echo "Using CONFIG_PATH: $CONFIG_PATH"
 
           # 修改配置
           sed -i '/CONFIG_TCP_CONG_BBR/d' $CONFIG_PATH
           echo "CONFIG_TCP_CONG_BBR=y" >> $CONFIG_PATH
           echo "CONFIG_DEFAULT_TCP_CONG=\"bbr\"" >> $CONFIG_PATH
-          
+
           # 重新初始化环境
+          cd ../../../../
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           source msm-kernel/build.config.gki.vendor
@@ -126,8 +124,8 @@ jobs:
           # 运行 savedefconfig
           make O=out/android14-6.1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- savedefconfig || { echo "Error: savedefconfig failed"; exit 1; }
 
-          # 检查是否应用成功
-          diff <(grep CONFIG_TCP_CONG_BBR common/arch/arm64/configs/gki_defconfig) <(grep CONFIG_TCP_CONG_BBR out/android14-6.1/common/defconfig) || { echo "Error: Configuration mismatch detected!"; exit 1; }
+          # 确保修改生效
+          diff <(grep CONFIG_TCP_CONG_BBR $CONFIG_PATH) <(grep CONFIG_TCP_CONG_BBR ../../out/android14-6.1/common/defconfig) || { echo "Error: Configuration mismatch detected!"; exit 1; }
 
       - name: Build kernel
         run: |
