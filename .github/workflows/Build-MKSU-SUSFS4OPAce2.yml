@@ -115,8 +115,8 @@ jobs:
            
       - name: Build kernel
         run: |
-         cd kernel_workspace
-         ./kernel_platform/oplus/build/oplus_build_kernel.sh ${{ github.event.inputs.CPUD }} gki
+         cd kernel_workspace/kernel_platform
+         python3 build_with_bazel.py -t waipio gki --config=fast --lto=full -o "$(pwd)/../out"
          
       - name: Make AnyKernel3
         run: |
