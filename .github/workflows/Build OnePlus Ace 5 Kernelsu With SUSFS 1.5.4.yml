@@ -6,7 +6,7 @@ on:
   
 jobs:
   build-kernel-a14-6-1-kernelsu-susfs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Maximize build space
