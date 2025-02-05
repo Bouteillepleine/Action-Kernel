@@ -1,152 +1,226 @@
-name: Build Oplus Ace5 KernelSU Next SUSFS with TCP BBR
+name: Build Oplus Ace5 KernelSU Next SUSFS 1.5.4 with TCP BBRV3
 
 on:
+  workflow_call: # This allows this workflow to be called from another workflow
   workflow_dispatch:
-    inputs:
-      CPU:
-        description: "分支"
-        required: true
-        default: 'sm8650'
-      FEIL:
-        description: "配置文件"
-        required: true
-        default: 'oneplus_ace5'
-      CPUD:
-        description: "处理器代号"
-        required: true
-        default: 'pineapple'
-      ANDROID_VERSION:
-        description: "内核安卓版本"
-        required: true
-        default: 'android14'
-      KERNEL_VERSION:
-        description: "内核版本"
-        required: true
-        default: '6.1'
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-kernel-a14-6-1-kernelsu-susfs-BBRV3:
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
           root-reserve-mb: 8192
-          temp-reserve-mb: 2048
+          temp-reserve-mb: 4096
+          swap-size-mb: 8192
           remove-dotnet: 'true'
           remove-android: 'true'
           remove-haskell: 'true'
           remove-codeql: 'true'
 
-      - name: Configure Git
+      - name: Get build space
         run: |
-          git config --global user.name "build"
-          git config --global user.email "543069760@qq.com"
+          free -h
+          df -h
+          
+      - name: Set CONFIG Environment Variable
+        run: |
+          # Set CONFIG dynamically based on matrix values
+          CONFIG="opace5"
+          
+          # Set CONFIG as an environment variable for future steps
+          echo "CONFIG=$CONFIG" >> $GITHUB_ENV
+          
+          echo "CONFIG set to: $CONFIG"
 
-      - name: Install dependencies
+      - name: Install Repo
         run: |
-          sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3 git curl bc build-essential flex bison libssl-dev
+          # Install dependencies
+          mkdir -p ./git-repo
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ./git-repo/repo
+          chmod a+rx ./git-repo/repo
+          echo "REPO=$GITHUB_WORKSPACE/./git-repo/repo" >> $GITHUB_ENV
 
-      - name: Install repo tool
+      - name: Clone AnyKernel3 and Other Dependencies
         run: |
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
-          chmod a+x ~/repo
-          sudo mv ~/repo /usr/bin/repo
-          which repo || { echo "Error: repo not found"; exit 1; }
+          echo "Cloning AnyKernel3 and other dependencies..."
 
-      - name: Initialize repo and sync
-        run: |
-          mkdir kernel_workspace && cd kernel_workspace
-          repo init -u https://github.com/543069760/kernel_manifest.git \
-            -b refs/heads/oneplus/${{ github.event.inputs.CPU }} \
-            -m ${{ github.event.inputs.FEIL }}.xml \
-            --depth=1
-          repo sync -j$(nproc) --force-sync --no-clone-bundle
-          find . -name setlocalversion -exec sed -i 's/ -dirty//g' {} +
+          # Define the branch names using the matrix values
+          ANYKERNEL_BRANCH="android14-6.1"
+          SUSFS_BRANCH="gki-android14-6.1"
 
-      - name: Set up KernelSU Next
-        run: |
-          cd kernel_workspace/kernel_platform
-          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -s next
-          cd KernelSU-Next
-          KSU_VERSION=$(expr $(git rev-list --count HEAD) + 10200)
-          echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-          sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
+          # Debug print the branches
+          echo "Using branch for AnyKernel3: $ANYKERNEL_BRANCH"
+          echo "Using branch for SUSFS: $SUSFS_BRANCH"
 
-      - name: Set up susfs
-        run: |
-          cd kernel_workspace
-          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
+          # Clone repositories using the branch names
+          git clone https://github.com/TheWildJames/AnyKernel3.git -b "$ANYKERNEL_BRANCH"
+          git clone https://github.com/543069760/susfs4ksu.git -b "$SUSFS_BRANCH"
           git clone https://github.com/TheWildJames/kernel_patches.git
-          cd kernel_platform
-          cp ../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU-Next/
-          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
-          cd KernelSU-Next
-          patch -p1 --forward < 10_enable_susfs_for_ksu.patch || true
-          cd ../common
-          patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
-          patch -p1 < ../../kernel_patches/69_hide_stuff.patch
-          git add -A && git commit -m "BUILD: Apply SUSFS patches"
-
-      - name: Merge BBR v3 into kernel
+      
+      - name: Initialize and Sync Kernel Source
         run: |
-          cd kernel_workspace/kernel_platform
+          echo "Creating folder for configuration: $CONFIG..."
+          mkdir -p "$CONFIG"
+          cd "$CONFIG"
+          
+          # Initialize and sync kernel source
+          echo "Initializing and syncing kernel source..."
+          $REPO init -u https://github.com/MClengchuan/oneplus_kernel_manifest.git -b refs/heads/oneplus/sm8650 -m oneplus_ace5_v.xml --repo-rev=v2.16 --depth=1
+          
+          # Sync repo and apply patches
+          $REPO --version
+          $REPO --trace sync -c -j$(nproc --all) --no-tags --fail-fast
+
+      - name: Add KernelSU
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Adding KernelSU..."
+          curl -LSs "https://raw.githubusercontent.com/rifsxd/KernelSU-Next/next/kernel/setup.sh" | bash -
+          cd ./KernelSU-Next/kernel
+          sed -i 's/ccflags-y += -DKSU_VERSION=16/ccflags-y += -DKSU_VERSION=12321/' ./Makefile
+
+      - name: Apply SUSFS Patches
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Applying SUSFS patches..."
+          
+          # Copy SUSFS patches
+          cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU-Next/
+          cp ../../susfs4ksu/kernel_patches/50_add_susfs_in_gki-android14-6.1.patch ./common/
+          cp ../../susfs4ksu/kernel_patches/fs/* ./common/fs/
+          cp ../../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          cd ./KernelSU-Next
+          
+          # Apply SUSFS patch for KernelSU
+          patch -p1 --forward < 10_enable_susfs_for_ksu.patch || true
+          
+          # Change to common directory and apply SUSFS patch
+          cd ../common
+          patch -p1 < 50_add_susfs_in_gki-android14-6.1.patch || true
+
+      - name: Apply Next-SUSFS Patches
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Applying next SUSFS patches..."
+          cp ../../kernel_patches/apk_sign.c_fix.patch ./
+          patch -p1 -F 3 < apk_sign.c_fix.patch
+          cp ../../kernel_patches/core_hook.c_fix.patch ./
+          patch -p1 --fuzz=3 < core_hook.c_fix.patch
+          cp ../../kernel_patches/selinux.c_fix.patch ./
+          patch -p1 -F 3 < selinux.c_fix.patch
+
+      - name: Apply Hide Stuff Patches
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform/common"
+          # Apply additional patch
+          cp ../../../kernel_patches/69_hide_stuff.patch ./
+          patch -p1 -F 3 < 69_hide_stuff.patch || true
+
+      - name: Add SUSFS Configuration Settings
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Adding configuration settings to gki_defconfig..."
+          
+          # Add SUSFS configuration settings
+          echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_SU=y" >> ./common/arch/arm64/configs/gki_defconfig
+          
+          # Add additional tmpfs config setting
+          echo "CONFIG_TMPFS_XATTR=y" >> ./common/arch/arm64/configs/gki_defconfig
+
+      - name: Merge BBR v3 into Kernel Source
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Merging BBR v3 into kernel source..."
           git remote add google-bbr https://github.com/google/bbr.git
           git fetch google-bbr
           git show-ref --verify --quiet refs/remotes/google-bbr/v3 || { echo "Error: google-bbr/v3 branch not found"; exit 1; }
           git merge google-bbr/v3 --allow-unrelated-histories -m "Merge BBR v3 into kernel"
 
-      - name: Check and enable BBR v3 in kernel config
+      - name: Add BBR Configuration Settings
         run: |
-          cd kernel_workspace/kernel_platform/common/arch/arm64/configs
-
-          # 确保 gki_defconfig 存在
-          CONFIG_PATH="./gki_defconfig"
-          if [ ! -f "$CONFIG_PATH" ]; then
-            echo "Error: $CONFIG_PATH not found!"
-            exit 1
-          fi
-          echo "Using CONFIG_PATH: $CONFIG_PATH"
-
-          # 修改配置
-          sed -i '/CONFIG_TCP_CONG_BBR/d' $CONFIG_PATH
-          echo "CONFIG_TCP_CONG_BBR=y" >> $CONFIG_PATH
-          echo "CONFIG_DEFAULT_TCP_CONG=\"bbr\"" >> $CONFIG_PATH
-
-          # 重新初始化环境
-          cd ../../../../
-          export ARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          source msm-kernel/build.config.gki
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
           
-          # 运行 savedefconfig
-          make O=out/android14-6.1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- savedefconfig || { echo "Error: savedefconfig failed"; exit 1; }
+          echo "Adding BBR configuration settings to gki_defconfig..."
+          
+          # Add BBR configuration settings
+          echo "CONFIG_TCP_CONG_BBR=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DEFAULT_TCP_CONG=\"bbr\"" >> ./common/arch/arm64/configs/gki_defconfig
 
-          # 确保修改生效
-          diff <(grep CONFIG_TCP_CONG_BBR $CONFIG_PATH) <(grep CONFIG_TCP_CONG_BBR ../../out/android14-6.1/common/defconfig) || { echo "Error: Configuration mismatch detected!"; exit 1; }
-
-      - name: Build kernel
+      - name: Run sed and perl Commands
         run: |
-          cd kernel_workspace
-          ./kernel_platform/oplus/build/oplus_build_kernel.sh \
-            ${{ github.event.inputs.CPUD }} \
-            gki \
-            BUILD_CONFIG=msm-kernel/build.config.gki.vendor \
-            SKIP_MRPROPER=1 || { echo "Error: Kernel build failed"; exit 1; }
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/kernel_platform"
+          
+          echo "Running sed commands..."
+          
+          # Run sed commands for modifications
+          sed -i 's/check_defconfig//' ./common/build.config.gki
+          sed -i '$s|echo "\$res"|echo "\$res-Wild+"|' ./common/scripts/setlocalversion
+          sed -i "/stable_scmversion_cmd/s/-maybe-dirty//g" ./build/kernel/kleaf/impl/stamp.bzl
+          sed -i 's/-dirty//' ./common/scripts/setlocalversion
+          # Run perl command to modify UTS_VERSION
+          perl -pi -e 's{UTS_VERSION="\$$echo \$UTS_VERSION \$CONFIG_FLAGS \$TIMESTAMP \| cut -b -\$UTS_LEN$"}{UTS_VERSION="#1 SMP PREEMPT Sat Apr 20 04:20:00 UTC 2024"}' ./common/scripts/mkcompile_h
 
-      - name: Package AnyKernel3
+      - name: Build the Kernel
         run: |
-          git clone https://github.com/Kernel-SU/AnyKernel3
-          rm -rf AnyKernel3/.git
-          cp kernel_workspace/kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/Image AnyKernel3/
-          echo "KernelSU Version: $KSUVER" > AnyKernel3/version-info
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG"
+          
+          echo "Building the kernel..."
+          rm -rf ./kernel_platform/common/android/abi_gki_protected_exports_*
+          ./kernel_platform/oplus/build/oplus_build_kernel.sh pineapple gki
 
-      - name: Upload Artifacts
+      - name: Create Bootimgs Folder and Copy Images
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG"
+          
+          echo "Copying Image"
+          cp ./out/dist/Image ../AnyKernel3/Image
+          
+      - name: Create ZIP Files for Different Formats
+        run: |
+          echo "Creating zip files for all formats..."
+          cd ./AnyKernel3
+          
+          ZIP_NAME="Anykernel3-OPAce5-A15-android14-6.1-KernelSU-SUSFS.zip"
+          echo "Creating zip file $ZIP_NAME..."
+          zip -r "../$ZIP_NAME" ./*
+
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel_${{ github.event.inputs.FEIL }}_${{ env.KSUVER }}
+          name: kernel-${{ env.CONFIG }}
           path: |
-            AnyKernel3/*
-            kernel_workspace/kernel_platform/out/msm-kernel-${{ github.event.inputs.CPUD }}-gki/dist/Image
+            *.zip
